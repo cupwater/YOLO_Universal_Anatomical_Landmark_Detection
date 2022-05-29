@@ -1,3 +1,10 @@
+'''
+Author: Peng Bo
+Date: 2022-04-27 16:09:11
+LastEditTime: 2022-05-22 17:41:21
+Description: 
+
+'''
 import os
 from PIL import Image
 
@@ -9,9 +16,9 @@ import torch.utils.data as data
 from ..utils import gaussianHeatmap, transformer
 
 
-class Chest(data.Dataset):
+class ChestInmemory(data.Dataset):
 
-    def __init__(self, prefix, phase, transform_params=dict(), sigma=5, num_landmark=6, size=[512, 512], use_abnormal=True, chest_set=None, exclude_list=None,use_background_channel=False):
+    def __init__(self, prefix, phase, transform_params=dict(), sigma=5, num_landmark=6, size=[512, 512], use_abnormal=True, chest_set=None, exclude_list=None, use_background_channel=False):
 
         self.transform = transformer(transform_params)
         self.size = tuple(size)
@@ -32,33 +39,55 @@ class Chest(data.Dataset):
         if not use_abnormal:
             files = [f for f in files if f[-1] == '0']
         n = len(files)
+
         # train_num = 195  # round(n*0.7) # 180
         # val_num = 34  # round(n*0.1)  # 24
-        train_num = 180  # round(n*0.7) # 180
-        val_num = 49  # round(n*0.1)  # 24
-        test_num = n - train_num - val_num
+        # test_num = n - train_num - val_num
         if phase == 'train':
+            train_num = 195  # round(n*0.7) # 180
             self.indexes = files[:train_num]
         elif phase == 'validate':
+            train_num = 195  # round(n*0.7) # 180
+            val_num = 34  # round(n*0.1)  # 24
+            test_num = n - train_num - val_num
             self.indexes = files[train_num:-test_num]
         elif phase == 'test':
-            self.indexes = files[-test_num:]
+            train_num = 195  # round(n*0.7) # 180
+            val_num = 34  # round(n*0.1)  # 24
+            test_num = n - train_num - val_num
+            # self.indexes = files[-test_num:]
+            self.indexes = files
         else:
             raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
+        self.__readAllData__()
 
+
+    def __readAllData__(self):
+        self.all_images  = []
+        self.all_imgsize = []
+        for i in range(self.__len__()):
+            name = self.indexes[i]
+            ret = {'name': name}
+            img, origin_size = self.readImage(
+                os.path.join(self.pth_Image, name+'.png'))
+            self.all_images.append(img)
+            self.all_imgsize.append(origin_size)
+        return
+        
     def __getitem__(self, index):
         name = self.indexes[index]
         ret = {'name': name}
 
-        img, origin_size = self.readImage(
-            os.path.join(self.pth_Image, name+'.png'))
+        img, origin_size = self.all_images[index], self.all_imgsize[index]
+        # self.readImage(
+        #     os.path.join(self.pth_Image, name+'.png'))
 
         points = self.readLandmark(name, origin_size)
         li = [self.genHeatmap(point, self.size) for point in points]
         if self.use_background_channel:
             sm = sum(li)
-            sm[sm>1]=1
+            sm[sm > 1] = 1
             li.append(1-sm)
         gt = np.array(li)
         img, gt = self.transform(img, gt)
@@ -97,3 +126,4 @@ class Chest(data.Dataset):
         for i in range(arr.shape[0]):
             arr[i] = (arr[i]-arr[i].mean())/(arr[i].std()+1e-20)
         return arr, origin_size
+

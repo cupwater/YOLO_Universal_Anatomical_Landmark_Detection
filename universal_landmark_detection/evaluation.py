@@ -99,7 +99,7 @@ def saveLabels(path, points, size):
             ratios = ['{:.4f}'.format(x/X) for x,X in zip(pt,size)]
             f.write(' '.join(ratios)+'\n')
 
-def evaluate(input_path, output_path, save_img=False, assigned=False, IS_DRAW_TEXT=False):
+def evaluate(input_path, output_path, save_img=True, assigned=False, IS_DRAW_TEXT=False):
     mkdir(output_path)
     dataset = os.path.basename(input_path).lower()
     image_path_pre = PATH_DIC[dataset]
@@ -108,8 +108,11 @@ def evaluate(input_path, output_path, save_img=False, assigned=False, IS_DRAW_TE
     print('output: ', output_path)
     print('image : ', image_path_pre)
     gen = [gt_p for gt_p in os.listdir(input_path) if gt_p.endswith('_gt.npy')]
+    print('gen : ',gen)
     pbar = tqdm(gen, ncols=80)
+    print('pbar : ',pbar)
     data_num = len(gen)
+    print('data_num : ',data_num)
     out_label_path = os.path.join(output_path, 'labels')
     mkdir(out_label_path)
     out_gt_path = os.path.join(output_path, 'gt_laels')
@@ -124,13 +127,17 @@ def evaluate(input_path, output_path, save_img=False, assigned=False, IS_DRAW_TE
     pixel_dis_list = []
     assigned_list = []
     for i, gt_p in enumerate(pbar):
+        print('i  : ',i)
+        print('gt_p : ',gt_p)
         pbar.set_description('{:03d}/{:03d}: {}'.format(i+1, data_num, gt_p))
         name = gt_p[:-7]
         heatmaps = np.load(os.path.join(input_path, name+'_output.npy'))
         img_size = heatmaps.shape[1:]
         cur_points = getPointsFromHeatmap(heatmaps)
+        #print('cur_points : ',cur_points)
         gt_map = np.load(os.path.join(input_path, gt_p))
         cur_gt = getPointsFromHeatmap(gt_map)
+        # print('cur_gt : ',cur_gt)
 
 
         if dataset == 'hand':
@@ -139,6 +146,8 @@ def evaluate(input_path, output_path, save_img=False, assigned=False, IS_DRAW_TE
         cur_pixel_dis = cal_all_distance(cur_points, cur_gt, 1)
         distance_list += cur_distance_list
         pixel_dis_list += cur_pixel_dis
+        if dataset == 'chest':
+            print('插入验证代码')
         if assigned:
             assigned_list += assigned_distance(cur_points,
                                                cur_gt, physical_factor)
@@ -209,7 +218,8 @@ if __name__ == "__main__":
     dic = {}
     pixel_dic = {}
     if not args.output:
-        output = os.path.join('.eval', args.input.replace('/', '_'))
+        output = os.path.join('./eval', args.input[3:].replace('/', '_'))
+
     for d in os.listdir(args.input):
         inp = os.path.join(args.input, d)
         if os.path.isdir(inp):

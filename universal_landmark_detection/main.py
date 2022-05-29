@@ -1,6 +1,15 @@
+'''
+Author: Peng Bo
+Date: 2022-05-29 01:01:01
+LastEditTime: 2022-05-29 20:07:43
+Description: 
+
+'''
 import argparse
 import torch
+# from model.runner_detail_loss import Runner
 from model.runner import Runner
+import os
 
 
 def get_args():
@@ -21,12 +30,13 @@ def get_args():
     # required
     parser.add_argument("-r", "--run_name", type=str, required=True)
     parser.add_argument("-d", "--run_dir", type=str, required=True, default='.runs')
-    parser.add_argument(
-        "-p", "--phase", choices=['train', 'validate', 'test'], required=True)
+    parser.add_argument("-p", "--phase", choices=['train', 'validate', 'test'], required=True)
+    parser.add_argument("--gpu-id", type=str, default="0")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True) #正向传播时：开启自动求导的异常侦测
     args = get_args()
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     Runner(args).run()

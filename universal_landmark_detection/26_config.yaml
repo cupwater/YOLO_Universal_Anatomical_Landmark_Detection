@@ -16,7 +16,7 @@ checkpoint: ''
 use_background_channel: false # 1- \sum 
 transform_params: # data_aug
     rotate_rate: 0.5
-    angle: 3
+    angle: 10
     flip_rate: 0
     axis: 1
     translate_rate: 0.5
@@ -26,11 +26,11 @@ mix_step: 1 # mix_training batch step: 0 for no mix
 
 dataset:
     # name_list: [ 'cephalometric', 'hand', 'chest' ]
-    name_list: [ 'chest' ]
+    name_list: [ 'chest_26' ]
     loss_weights: [1, 1, 1, ]
     batch_size_dic: # this will override that of data_loader in train stage
         # hand: 4
-        chest: 16
+        chest_26: 16
         # chest: 16
         # cephalometric: 4
 
@@ -45,7 +45,7 @@ dataset:
     #     sigma: 3
     #     num_landmark: 19
     #     size: [416, 512] # resize to width x height, origin_size: [1935,2400]
-    chest:
+    chest_26:
         #prefix: '/data/YOLO_Universal_Anatomical_Landmark_Detection-main/data_all/chest'
         prefix: '/data/BY/landmarks_data'
         sigma: 3

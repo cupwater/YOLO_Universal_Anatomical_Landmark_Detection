@@ -26,28 +26,17 @@ mix_step: 1 # mix_training batch step: 0 for no mix
 
 dataset:
     # name_list: [ 'cephalometric', 'hand', 'chest' ]
-    name_list: [ 'chest' ]
+    name_list: [ 'chest_test' ]
     loss_weights: [1, 1, 1, ]
     batch_size_dic: # this will override that of data_loader in train stage
         # hand: 4
-        chest: 16
+        chest_test: 16
         # chest: 16
         # cephalometric: 4
 
-    # hand:
-    #     prefix: '../data/hand'
-    #     sigma: 3
-    #     num_landmark: 37
-    #     size: [368, 512] # resize
-    # cephalometric: 
-    # # spacing: 0.1 x 0.1 mm
-    #     prefix: '../data/ISBI2015_ceph'
-    #     sigma: 3
-    #     num_landmark: 19
-    #     size: [416, 512] # resize to width x height, origin_size: [1935,2400]
-    chest:
+    chest_test:
         #prefix: '/data/YOLO_Universal_Anatomical_Landmark_Detection-main/data_all/chest'
-        prefix: '/data/BY/landmarks_data'
+        prefix: '../data/chest_26landmarks'
         sigma: 3
         num_landmark: 26
         size: [512, 512] # resize
@@ -70,19 +59,19 @@ dataloader:
     train:
         batch_size: 1
         # batch_size: 32
-        num_workers: 20
+        # num_workers: 20
         shuffle: true
         drop_last: true
     validate:
         batch_size: 1
         # batch_size: 2
-        num_workers: 20
+        # num_workers: 20
         shuffle: true
         drop_last: true
     test:
         batch_size: 1
         # batch_size: 2
-        num_workers: 20
+        # num_workers: 20
         shuffle: true
 
 # hand_net:

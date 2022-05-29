@@ -1,3 +1,10 @@
+'''
+Author: Peng Bo
+Date: 2022-05-29 20:18:16
+LastEditTime: 2022-05-29 20:18:27
+Description: 
+
+'''
 import os
 from PIL import Image
 
@@ -9,35 +16,21 @@ import torch.utils.data as data
 from ..utils import gaussianHeatmap, transformer
 
 
-class Hand(data.Dataset):
+class ChestTest(data.Dataset):
 
-    def __init__(self, prefix, phase, transform_params=dict(), sigma=10, num_landmark=19, size=[1000, 1400],use_background_channel=False):
+    def __init__(self, prefix, phase, transform_params=dict(), sigma=5, num_landmark=6, size=[512, 512], use_abnormal=True, chest_set=None, exclude_list=None,use_background_channel=False):
 
         self.transform = transformer(transform_params)
         self.size = tuple(size)
         self.num_landmark = num_landmark
-
-        self.pth_Image = os.path.join(prefix, 'jpg')
         self.use_background_channel = use_background_channel
-        self.labels = pd.read_csv(os.path.join(
-            prefix, 'all.csv'), header=None, index_col=0)
+
+        self.pth_Image = os.path.join(prefix, 'pngs')
+        self.pth_Label = os.path.join(prefix, 'labels')
 
         # file index
         files = [i[:-4] for i in sorted(os.listdir(self.pth_Image))]
-        n = len(files)
-        # train_num = 550  # round(n*0.7)
-        # val_num = 59  # round(n*0.1)
-        train_num = 550  # round(n*0.7)
-        val_num = 180  # round(n*0.1)
-        test_num = n - train_num - val_num
-        if phase == 'train':
-            self.indexes = files[:train_num]
-        elif phase == 'validate':
-            self.indexes = files[train_num:-test_num]
-        elif phase == 'test':
-            self.indexes = files[-test_num:]
-        else:
-            raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
+        self.indexes = files
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
 
     def __getitem__(self, index):
@@ -45,7 +38,7 @@ class Hand(data.Dataset):
         ret = {'name': name}
 
         img, origin_size = self.readImage(
-            os.path.join(self.pth_Image, name+'.jpg'))
+            os.path.join(self.pth_Image, name+'.png'))
 
         points = self.readLandmark(name, origin_size)
         li = [self.genHeatmap(point, self.size) for point in points]
@@ -63,10 +56,14 @@ class Hand(data.Dataset):
         return len(self.indexes)
 
     def readLandmark(self, name, origin_size):
-        li = list(self.labels.loc[int(name), :])
-        r1, r2 = [i/j for i, j in zip(self.size, origin_size)]
-        points = [tuple([round(li[i]*r1), round(li[i+1]*r2)])
-                  for i in range(0, len(li), 2)]
+        path = os.path.join(self.pth_Label, name+'.txt')
+        points = []
+        with open(path, 'r') as f:
+            n = int(f.readline())
+            for i in range(n):
+                ratios = [float(i) for i in f.readline().split()]
+                pt = tuple([round(r*sz) for r, sz in zip(ratios, self.size)])
+                points.append(pt)
         return points
 
     def readImage(self, path):
@@ -79,6 +76,8 @@ class Hand(data.Dataset):
         img = img.resize(self.size)
         arr = np.array(img)
         # channel x width x height: 1 x width x height
+        if arr.ndim == 3:
+            arr = arr[..., 0]
         arr = np.expand_dims(np.transpose(arr, (1, 0)), 0).astype(np.float)
         # conveting to float is important, otherwise big bug occurs
         for i in range(arr.shape[0]):
