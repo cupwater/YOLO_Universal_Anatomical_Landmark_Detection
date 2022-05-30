@@ -1,3 +1,10 @@
+'''
+Author: Peng Bo
+Date: 2022-05-22 17:24:29
+LastEditTime: 2022-05-30 09:43:01
+Description: 
+
+'''
 import os
 from PIL import Image
 
@@ -25,19 +32,20 @@ class Hand(data.Dataset):
         # file index
         files = [i[:-4] for i in sorted(os.listdir(self.pth_Image))]
         n = len(files)
+        self.indexes = files
         # train_num = 550  # round(n*0.7)
         # val_num = 59  # round(n*0.1)
-        train_num = 550  # round(n*0.7)
-        val_num = 180  # round(n*0.1)
-        test_num = n - train_num - val_num
-        if phase == 'train':
-            self.indexes = files[:train_num]
-        elif phase == 'validate':
-            self.indexes = files[train_num:-test_num]
-        elif phase == 'test':
-            self.indexes = files[-test_num:]
-        else:
-            raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
+        # train_num = 550  # round(n*0.7)
+        # val_num = 180  # round(n*0.1)
+        # test_num = n - train_num - val_num
+        # if phase == 'train':
+        #     self.indexes = files[:train_num]
+        # elif phase == 'validate':
+        #     self.indexes = files[train_num:-test_num]
+        # elif phase == 'test':
+        #     self.indexes = files[-test_num:]
+        # else:
+        #     raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
 
     def __getitem__(self, index):

@@ -24,14 +24,15 @@ class Cephalometric(data.Dataset):
         # file index
         files = [i[:-4] for i in sorted(os.listdir(self.pth_Image))]
         n = len(files)
-        if phase == 'train':
-            self.indexes = files[:240]
-        elif phase == 'validate':
-            self.indexes = files[240:320]
-        elif phase == 'test':
-            self.indexes = files[320:400]
-        else:
-            raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
+        self.indexes = files
+        # if phase == 'train':
+        #     self.indexes = files[:240]
+        # elif phase == 'validate':
+        #     self.indexes = files[240:320]
+        # elif phase == 'test':
+        #     self.indexes = files[320:400]
+        # else:
+        #     raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
         # if phase == 'train':
         #     self.indexes = files[:130]

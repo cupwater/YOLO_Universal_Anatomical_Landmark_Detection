@@ -31,9 +31,9 @@ dataset:
         chest: 4
 
     chest:
-        prefix: '../data/chest'
+        prefix: '../data/chest_26landmarks'
         sigma: 3
-        num_landmark: 6
+        num_landmark: 26
         size: [512, 512] # resize
         use_abnormal: False
         chest_set: ['CHN'] #, 'MCU']

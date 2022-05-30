@@ -2,9 +2,18 @@
 __pycache__/
 *.py[cod]
 *$py.class
+data/
 
 # C extensions
 *.so
+*.jpg
+*.png
+.*
+*.txt
+checkpoints/
+runs/
+*.tar.gz
+*.sh
 
 # Distribution / packaging
 .Python

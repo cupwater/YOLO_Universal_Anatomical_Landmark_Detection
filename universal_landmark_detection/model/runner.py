@@ -47,7 +47,7 @@ class Runner(object):
             dataset_list = []
             loader_list = []
             trans_dic = self.opts['transform_params'] if s == 'train' else {}
-            #self.name_list = ['chest']
+            # self.name_list = ['chest_test']
             for name in self.name_list:
                 print(name)
                 d = get_dataset(name)(phase=s, transform_params=trans_dic,
@@ -148,8 +148,8 @@ class Runner(object):
 
     def config(self):
         self.get_opts()
-        self.get_loader()
         self.get_model()
+        self.get_loader()
         self.get_logger()
 
     def run(self):
@@ -231,7 +231,8 @@ class Runner(object):
                     save_data(data_dic)
                 
                 save_path = '../data/' + data_dic['name'][0] + '.jpg'
-                visualize_heatmap(data_dic['input'][0], data_dic['output'][0], save_path=save_path)
+                if task_idx == 2:
+                    visualize_heatmap(data_dic['input'][0], data_dic['output'][0], save_path=save_path)
 
                 if 'gt' in data_dic:
                     if data_dic['output'].shape != data_dic['gt'].shape:
