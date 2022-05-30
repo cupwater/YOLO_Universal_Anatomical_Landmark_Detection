@@ -25,8 +25,10 @@ class Hand(data.Dataset):
         # file index
         files = [i[:-4] for i in sorted(os.listdir(self.pth_Image))]
         n = len(files)
+        # train_num = 550  # round(n*0.7)
+        # val_num = 59  # round(n*0.1)
         train_num = 550  # round(n*0.7)
-        val_num = 59  # round(n*0.1)
+        val_num = 180  # round(n*0.1)
         test_num = n - train_num - val_num
         if phase == 'train':
             self.indexes = files[:train_num]

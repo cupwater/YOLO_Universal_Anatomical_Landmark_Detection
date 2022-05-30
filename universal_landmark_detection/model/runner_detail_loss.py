@@ -38,8 +38,7 @@ class Runner(object):
         mkdir(self.run_dir)
         toYaml("{rd}/config_{ph}.yaml".format(rd=self.run_dir, ph=self.phase), self.opts)
         shutil.copy(self.args.config, '{run_dir}/config_origin.yaml'.format(run_dir=self.run_dir))
-        #os.environ["CUDA_VISIBLE_DEVICES"] = self.opts.cuda_devices
-        #os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+        # os.environ["CUDA_VISIBLE_DEVICES"] = self.opts.cuda_devices
         self.setup_seed(self.opts.seed)
 
     def get_loader(self):
@@ -47,7 +46,6 @@ class Runner(object):
             dataset_list = []
             loader_list = []
             trans_dic = self.opts['transform_params'] if s == 'train' else {}
-            #self.name_list = ['chest']
             for name in self.name_list:
                 print(name)
                 d = get_dataset(name)(phase=s, transform_params=trans_dic,
@@ -121,7 +119,6 @@ class Runner(object):
             net_params = net_params = self.opts[modelname] if modelname in self.opts else dict()
             net_params.update(channel_params)
             self.model = get_net(modelname)(** net_params)
-        #self.model = torch.nn.DataParallel(self.model)
         if torch.cuda.is_available():
             self.model = self.model.cuda()
         self.model = torch.nn.DataParallel(self.model)  # TODO
@@ -129,9 +126,8 @@ class Runner(object):
         if os.path.isfile(self.opts.checkpoint):
             print('loading checkpoint:', self.opts.checkpoint)
             checkpoint = torch.load(self.opts.checkpoint, map_location='cpu')
-            self.start_epoch = checkpoint['epoch'] + 1
-            self.model.load_state_dict(checkpoint['model_state_dict'],False)
-           # self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.start_epoch = checkpoint['epoch'] if 'epoch' in checkpoint else 0  + 1
+            self.model.load_state_dict(checkpoint['model_state_dict'])
             get_learner()
         else:
             self.start_epoch = 0
@@ -154,7 +150,8 @@ class Runner(object):
 
     def run(self):
         self.config()
-        self.best_loss = self.train_loss = float('inf')
+        self.train_loss = [0,0,0]
+        self.best_loss = float('inf')
         if self.phase == 'train':
             self.train()
             self.phase = 'test'
@@ -212,7 +209,7 @@ class Runner(object):
         mkdir(prefix)
         s = 'validate' if self.phase == 'train' else self.phase
         loader_list = getattr(self, '{}_loader_list'.format(s))
-        val_loss = 0
+        val_loss = [0,0,0]
         allep = self.opts.epochs
         for task_idx, (name, cur_loader) in enumerate(zip(self.name_list, loader_list)):
             dest = os.path.join(prefix, name)  # is read in func save_data
@@ -229,22 +226,20 @@ class Runner(object):
                     data_dic.update(self.model(data_dic['input'], task_idx))
                 if epoch + 1 >= allep or self.phase != 'train':
                     save_data(data_dic)
-                
-                #visualize_heatmap(data_dic['input'][0], data_dic['output'][0], save_path=f'../data/{str(i)}.jpg')
+                res_name = data_dic['name'][0]
+                # visualize_heatmap(data_dic['input'][0], data_dic['output'][0], save_path=f'../data/{res_name}.jpg')
 
                 if 'gt' in data_dic:
                     if data_dic['output'].shape != data_dic['gt'].shape:
                         print(data_dic['path'])
                         exit()
-                    loss = self.val_loss(data_dic['output'], data_dic['gt']) / ( data_dic['gt'].shape[0]*data_dic['gt'].shape[1] )   # TODO
+                    loss = self.val_loss(data_dic['output'], data_dic['gt']) / ( data_dic['gt'].shape[0]*data_dic['gt'].shape[1] )  # TODO
                     if 'rec_image' in data_dic:
                         loss += get_loss('l2')(**self.opts.learning.l2)(data_dic['input'], data_dic['rec_image'])
-                    # pbar.set_description("[{curPhase} {dataname}] epoch:{ep:>3d}/{allep:<3d}, batch:{num:>6d}/{batch_num:<6d}, train:{ls:.6f}, vali:{val_loss:.6f}".format(dataname=name.rjust(13),
-                    #   ep=epoch, allep=allep, num=(i + 1), batch_num=batch_num, val_loss=loss.item(), ls=self.train_loss, curPhase=s.ljust(8)))
                     name_loss_dic['_'.join(data_dic['name'])] = loss.item()
+            mean = np.mean(list(name_loss_dic.values()))
+            val_loss[task_idx] = mean
             if 'gt' in data_dic:
-                mean = np.mean(list(name_loss_dic.values()))
-                val_loss += mean
                 path = os.path.join(
                     loss_dir, 'epoch_{:03d}_loss_{:.6f}.txt'.format(epoch, mean))
                 with open(path, 'w') as f:
@@ -263,13 +258,15 @@ class Runner(object):
         endEpoch = self.opts.epochs - 1
         save_freq = self.opts.save_freq
         eval_freq = self.opts.eval_freq
+        with open(loss_file, 'a') as f:
+            f.write(f'Epoch,\t {self.name_list[0]},\t {self.name_list[1]},\t {self.name_list[2]},\t {self.name_list[0]},\t {self.name_list[1]},\t {self.name_list[2]}\n')
         for epoch in pbar:
             self.update_params(epoch, pbar)
             plot_2d(self.run_dir + '/learning_rate.png', list(range(len(self.lr_list))), self.lr_list, 'step', 'lr', 'lr-step')
             if epoch % eval_freq == 0 or epoch == endEpoch:
                 val_loss = self.validateTest(epoch)
                 xs.append(epoch)
-                ys.append(val_loss)
+                ys.append(np.sum(val_loss))
                 plot_2d(self.run_dir + '/loss.png', xs, ys,
                         'epoch', 'loss', 'epoch-loss')
                 data = {
@@ -280,14 +277,19 @@ class Runner(object):
                     'scheduler': self.scheduler,
                 }
                 save_name = "{rn}_epoch{epoch:03d}_train{trainloss:.6f}_val{valloss:.6f}.pt".format(
-                    rn=self.run_name, epoch=epoch, valloss=val_loss, trainloss=self.train_loss)
+                    rn=self.run_name, epoch=epoch, valloss=np.sum(val_loss), trainloss=np.sum(self.train_loss))
                 with open(loss_file, 'a') as f:
-                    f.write('{:03d},{:.6f},{:.6f}\n'.format(
-                        epoch, self.train_loss, val_loss))
+                    if len(val_loss) == 1:
+                        f.write('{:03d},{:.6f},{:.6f}\n'.format(
+                            epoch, self.train_loss[0], val_loss[0]))
+                    else:
+                        f.write('{:03d},\t {:.6f},\t {:.6f},\t {:.6f},\t {:.6f},\t {:.6f},\t {:.6f}\n'.format(
+                            epoch, self.train_loss[0], self.train_loss[1], self.train_loss[2], 
+                            val_loss[0], val_loss[1], val_loss[2]))
                 if (save_freq != 0 and epoch % save_freq == 0) or epoch == endEpoch:
                     torch.save(data, os.path.join(checkpoint_dir, save_name))
-                if val_loss < self.best_loss:
-                    self.best_loss = val_loss
+                if np.sum(val_loss) < self.best_loss:
+                    self.best_loss = np.sum(val_loss)
                 dest = os.path.join(checkpoint_dir, 'best_' + save_name)
                 self.opts.checkpoint = dest
                 torch.save(data, dest)
@@ -295,12 +297,12 @@ class Runner(object):
     def update_params(self, epoch, pbar):
         # to try: harmonic mean
         self.model.train()  # important
-        self.train_loss = 0  # sum of different datasets' arithmetic mean
+        self.train_loss = [0,0,0]  # sum of different datasets' arithmetic mean
         allep = self.opts.epochs
         use_scheduler = self.opts.learning.use_scheduler
+        
         for task_idx, (name, loader) in enumerate(zip(self.train_name_list, self.train_loader_list)):
             batch_num = len(loader)
-            cur_loss = 0
             for i, data_dic in enumerate(loader):
                 if isinstance(data_dic, tuple):
                     task_idx = data_dic[1]
@@ -314,13 +316,13 @@ class Runner(object):
                     loss += get_loss('l2')(**self.opts.learning.l2)(data_dic['input'], data_dic['rec_image'])
                 if hasattr(self, 'loss_weights'):
                     loss *= self.loss_weights[task_idx]
-                cur_loss += loss.item()
                 loss.backward()
+                self.train_loss[task_idx] += loss.item()
                 self.lr_list.append(self.optim.param_groups[0]['lr'])
                 self.optim.step()
                 if use_scheduler:
                     self.scheduler.step()  # behind optim.step()
                 pbar.set_description("[train    {dataname}] epoch:{ep:>3d}/{allep:<3d}, batch:{num:>6d}/{batch_num:<6d}, train:{ls:.6f}, best:{val_loss:.6f}".format(
                     dataname=name.rjust(13), ep=epoch, allep=allep, num=i + 1, batch_num=batch_num, ls=loss.item(), val_loss=self.best_loss))
-            self.train_loss += cur_loss / len(loader)
+            self.train_loss = [_loss/len(loader) for _loss in self.train_loss]
 

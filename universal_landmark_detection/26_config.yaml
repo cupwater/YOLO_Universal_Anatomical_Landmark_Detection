@@ -16,7 +16,7 @@ checkpoint: ''
 use_background_channel: false # 1- \sum 
 transform_params: # data_aug
     rotate_rate: 0.5
-    angle: 3
+    angle: 10
     flip_rate: 0
     axis: 1
     translate_rate: 0.5

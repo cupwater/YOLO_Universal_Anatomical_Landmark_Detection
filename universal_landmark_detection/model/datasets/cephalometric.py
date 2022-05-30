@@ -25,14 +25,23 @@ class Cephalometric(data.Dataset):
         files = [i[:-4] for i in sorted(os.listdir(self.pth_Image))]
         n = len(files)
         if phase == 'train':
-            self.indexes = files[:130]
+            self.indexes = files[:240]
         elif phase == 'validate':
-            self.indexes = files[130:150]
+            self.indexes = files[240:320]
         elif phase == 'test':
-            self.indexes = files[150:400]
+            self.indexes = files[320:400]
         else:
             raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
         self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
+        # if phase == 'train':
+        #     self.indexes = files[:130]
+        # elif phase == 'validate':
+        #     self.indexes = files[130:150]
+        # elif phase == 'test':
+        #     self.indexes = files[150:400]
+        # else:
+        #     raise Exception("Unknown phase: {phase}".fomrat(phase=phase))
+        # self.genHeatmap = gaussianHeatmap(sigma, dim=len(size))
 
         # # todo
         # self.pth_Image='./missing_landmarks/images'
